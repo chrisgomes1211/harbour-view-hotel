@@ -2,20 +2,20 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+permissions:
+  contents: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Inject Groq API key
         run: |
           sed -i "s/__GROQ_API_KEY__/${{ secrets.GROQ_API_KEY }}/g" index.html
-      - name: Deploy
+      - name: Deploy to gh-pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: .
           clean: true
-          single-commit: true
