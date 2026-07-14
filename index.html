@@ -843,11 +843,13 @@ input.addEventListener('keydown',e=>{
 // ============================================================
 //  BOOT
 // ============================================================
-buildPills();
-buildAwning();
-initTaglines();
-await fetchSheet();
-addMCPStep('fa-concierge-bell','MCP Hotel Server','Ready','discover');
+(async function boot(){
+  buildPills();
+  buildAwning();
+  initTaglines();
+  await fetchSheet();
+  addMCPStep('fa-concierge-bell','MCP Hotel Server','Ready','discover');
+})();
 </script>
 
 </body>
