@@ -2,6 +2,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+permissions:
+  contents: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -11,14 +13,16 @@ jobs:
         run: |
           sed -i "s/__GROQ_API_KEY__/${{ secrets.GROQ_API_KEY }}/g" index.html
       - name: Deploy
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p /tmp/out
-          cp index.html .nojekyll /tmp/out/
-          cd /tmp/out
+          mkdir -p /tmp/deploy
+          cp index.html .nojekyll /tmp/deploy/
+          cd /tmp/deploy
           git init
           git config user.name github-actions
           git config user.email actions@github.com
           git add -A
           git commit -m "Deploy"
-          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git remote add origin https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           git push origin HEAD:gh-pages --force
