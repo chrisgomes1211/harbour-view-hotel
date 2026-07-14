@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Harbour View Hotel · Concierge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#1B2A4A;color:#2C2C2C;height:100vh;overflow:hidden}
+button{cursor:pointer;font-family:inherit}
+
+/* ── Loading screen ── */
+#loading{position:fixed;inset:0;z-index:9999;background:#1B2A4A;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s}
+#loading.hide{opacity:0;pointer-events:none}
+#loading svg{width:80px;height:80px;animation:wavePulse 1.6s ease-in-out infinite}
+@keyframes wavePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.loading-text{color:#C4956A;font-family:'Playfair Display',serif;font-size:1.4rem;margin-top:20px}
+.loading-sub{color:rgba(196,149,106,.7);font-size:.85rem;margin-top:8px}
+
+/* ── Layout ── */
+#app{display:flex;height:100vh;width:100vw}
+#left{flex:1;display:flex;flex-direction:column;min-width:0;background:#F5F0EB}
+#right{width:380px;display:flex;flex-direction:column;background:#fff;border-left:1px solid #e0d8d0;flex-shrink:0}
+@media(max-width:860px){#right{display:none}}
+
+/* ── Header ── */
+#header{background:#1B2A4A;padding:14px 24px;display:flex;align-items:center;gap:14px;flex-shrink:0;position:relative;overflow:hidden}
+#header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#C4956A,#4A90D9,#C4956A);background-size:200% 100%;animation:shimmer 4s linear infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+#avatar{width:44px;height:44px;border-radius:50%;background:#C4956A;display:flex;align-items:center;justify-content:center;font-size:22px;color:#1B2A4A;flex-shrink:0;transition:transform .3s}
+#avatar.talk{animation:avatarTalk .4s ease}
+@keyframes avatarTalk{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+#avatar img{width:44px;height:44px;border-radius:50%;object-fit:cover}
+#hotel-name{color:#fff;font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:600;line-height:1.2}
+#hotel-sub{color:rgba(255,255,255,.6);font-size:.72rem}
+#tagline{color:#C4956A;font-size:.78rem;margin-left:auto;transition:opacity .35s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+#tagline.fade{opacity:0}
+
+/* ── Scrolling awning ── */
+#awning{height:32px;background:repeating-linear-gradient(90deg,#C4956A22 0,#C4956A22 40px,#C4956A44 40px,#C4956A44 80px);overflow:hidden;position:relative;flex-shrink:0}
+#awning-inner{display:flex;gap:50px;white-space:nowrap;animation:scrollAwning 40s linear infinite;padding:6px 0;font-size:.75rem;color:#4A5568}
+#awning-inner span{display:inline-flex;align-items:center;gap:6px}
+#awning-inner i{color:#C4956A;width:16px;text-align:center}
+@keyframes scrollAwning{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ── Chat area ── */
+#chat{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+#chat::-webkit-scrollbar{width:5px}
+#chat::-webkit-scrollbar-thumb{background:#C4956A66;border-radius:4px}
+.msg{max-width:85%;padding:12px 16px;border-radius:12px;font-size:.9rem;line-height:1.5;animation:fadeUp .3s ease;word-wrap:break-word}
+.msg.user{align-self:flex-end;background:#1B2A4A;color:#fff;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:#fff;color:#2C2C2C;border:1px solid #e0d8d0;border-bottom-left-radius:4px}
+.msg.bot .price{color:#1B2A4A;font-weight:600}
+.msg.bot .offer{color:#C4956A;font-weight:600}
+.msg.bot strong{color:#1B2A4A}
+.msg.bot .cat-img{width:100%;height:120px;object-fit:cover;border-radius:8px;margin-bottom:8px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Typing indicator ── */
+#typing{display:none;align-self:flex-start;background:#fff;border:1px solid #e0d8d0;border-radius:12px;padding:12px 18px;border-bottom-left-radius:4px}
+#typing.show{display:flex;gap:4px}
+#typing span{width:7px;height:7px;background:#C4956A;border-radius:50%;animation:bounce 1.2s ease-in-out infinite}
+#typing span:nth-child(2){animation-delay:.2s}
+#typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* ── Quick pills ── */
+#pills{display:flex;gap:8px;padding:10px 20px;flex-wrap:wrap;flex-shrink:0}
+.pill{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;border:1px solid #C4956A;background:transparent;color:#1B2A4A;font-size:.78rem;font-weight:500;transition:all .2s;white-space:nowrap}
+.pill:hover{background:#C4956A;color:#fff;border-color:#C4956A}
+.pill i{font-size:.85rem;width:16px;text-align:center}
+
+/* ── Input bar ── */
+#inputBar{display:flex;gap:10px;padding:12px 20px 16px;flex-shrink:0;border-top:1px solid #e0d8d0;background:#F5F0EB}
+#input{flex:1;padding:11px 16px;border-radius:24px;border:2px solid #e0d8d0;font-size:.9rem;outline:none;transition:border-color .2s;background:#fff}
+#input:focus{border-color:#C4956A}
+#send{width:42px;height:42px;border-radius:50%;border:none;background:#1B2A4A;color:#fff;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .2s;flex-shrink:0}
+#send:hover{background:#C4956A}
+#send:disabled{opacity:.4;cursor:default}
+
+/* ── Right panel: header ── */
+#right-header{background:#1B2A4A;padding:14px 18px;flex-shrink:0}
+#right-header h3{color:#C4956A;font-family:'Playfair Display',serif;font-size:.95rem}
+#right-header p{color:rgba(255,255,255,.5);font-size:.72rem;margin-top:2px}
+#refCount{color:rgba(255,255,255,.6);font-size:.72rem}
+
+/* ── Reference cards ── */
+#refBody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+#refBody::-webkit-scrollbar{width:4px}
+#refBody::-webkit-scrollbar-thumb{background:#C4956A66;border-radius:4px}
+#refEmpty{text-align:center;padding:40px 20px;color:#999;font-size:.85rem;line-height:1.6}
+.svc-card{background:#fff;border:1px solid #e0d8d0;border-radius:10px;overflow:hidden;transition:box-shadow .2s,transform .2s;animation:fadeUp .35s ease both}
+.svc-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);transform:translateY(-1px)}
+.svc-card-img{width:100%;height:90px;object-fit:cover;display:block}
+.svc-card-body{padding:10px 12px 12px}
+.svc-card-top{display:flex;justify-content:space-between;align-items:flex-start}
+.svc-name{font-weight:600;font-size:.82rem;color:#1B2A4A;line-height:1.2}
+.svc-category{font-size:.7rem;color:#888;margin-top:2px}
+.svc-price{font-weight:700;font-size:.9rem;color:#C4956A;white-space:nowrap}
+.svc-meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;font-size:.72rem;color:#666}
+.svc-meta span{display:inline-flex;align-items:center;gap:4px}
+.svc-meta i{width:14px;text-align:center;color:#C4956A}
+.svc-offer{background:#fef3e7;color:#C4956A;padding:2px 8px;border-radius:10px;font-weight:600;font-size:.7rem}
+.svc-slots{color:#2e7d32}
+.svc-slots.low{color:#e65100}
+.svc-slots.none{color:#999!important}
+.svc-desc{font-size:.75rem;color:#555;margin-top:6px;line-height:1.4;display:none}
+.svc-desc.open{display:block}
+.svc-expand{font-size:.7rem;color:#C4956A;cursor:pointer;margin-top:4px;display:inline-flex;align-items:center;gap:4px}
+.svc-expand:hover{text-decoration:underline}
+.svc-book{width:100%;margin-top:8px;padding:7px;border:none;border-radius:6px;background:#1B2A4A;color:#fff;font-weight:600;font-size:.78rem;transition:background .2s}
+.svc-book:hover{background:#C4956A}
+
+/* ── MCP panel ── */
+#mcpPanel{background:#fafaf8;border-top:1px solid #e0d8d0;padding:10px 14px;flex-shrink:0;max-height:110px;overflow-y:auto}
+#mcpPanel::-webkit-scrollbar{width:3px}
+#mcpPanel::-webkit-scrollbar-thumb{background:#C4956A66;border-radius:3px}
+#mcpPanel h4{font-size:.7rem;color:#999;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+#mcpFlow{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.mcp-step{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #e0d8d0;border-radius:6px;padding:4px 10px;font-size:.7rem;animation:stepIn .3s ease}
+.mcp-step .icon{width:18px;text-align:center;font-size:.75rem}
+.mcp-step .icon.discover{color:#4A90D9}
+.mcp-step .icon.read{color:#C4956A}
+.mcp-step .icon.llm{color:#9c27b0}
+.mcp-step .icon.result{color:#2e7d32}
+.mcp-step .icon.done{color:#1B2A4A}
+.mcp-step .label{color:#555;font-weight:500}
+.mcp-step .detail{color:#999;font-size:.65rem}
+.mcp-arrow{color:#ccc;font-size:.6rem;padding:0 2px}
+@keyframes stepIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+#mcpEmpty{text-align:center;color:#ccc;font-size:.72rem;padding:8px 0}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:#1B2A4A;color:#C4956A;padding:12px 28px;border-radius:10px;font-weight:600;font-size:.9rem;opacity:0;transition:all .35s;z-index:999;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast i{margin-right:8px;color:#C4956A}
+
+/* ── Footer ── */
+#footer{padding:8px 18px;background:#f5f0eb;border-top:1px solid #e0d8d0;text-align:center;font-size:.68rem;color:#999;flex-shrink:0}
+#footer a{color:#C4956A;text-decoration:none}
+#footer a:hover{text-decoration:underline}
+
+/* ── Sparkle burst ── */
+.sparkle{position:absolute;pointer-events:none;width:6px;height:6px;border-radius:50%;animation:sparkleOut .6s ease forwards}
+@keyframes sparkleOut{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <svg viewBox="0 0 80 60" fill="none" stroke="#C4956A" stroke-width="2.5" stroke-linecap="round">
+    <path d="M10 35 Q20 15 30 35 Q40 15 50 35 Q60 15 70 35" />
+    <path d="M10 45 Q20 25 30 45 Q40 25 50 45 Q60 25 70 45" opacity="0.5" />
+  </svg>
+  <div class="loading-text">Harbour View Hotel</div>
+  <div class="loading-sub" id="loadSub">Your Concierge is preparing...</div>
+</div>
+
+<div id="app">
+
+  <!-- LEFT PANEL -->
+  <div id="left">
+    <div id="header">
+      <div id="avatar"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Concierge&accessories=round&top=shortHair&facialHair=medium&clothing=blazerAndShirt&clothingColor=c4956a&hairColor=2c2c2c&skinColor=f5d6c6&accessoriesColor=1b2a4a" alt="Concierge"></div>
+      <div>
+        <div id="hotel-name">Harbour View Hotel</div>
+        <div id="hotel-sub"><i class="fas fa-map-pin" style="font-size:10px;color:#C4956A;margin-right:3px"></i> Westport, Co. Mayo</div>
+      </div>
+      <div id="tagline">Your personal concierge, ready to help</div>
+    </div>
+
+    <div id="awning"><div id="awning-inner"></div></div>
+
+    <div id="pills"></div>
+
+    <div id="chat">
+      <div class="msg bot">
+        <img class="cat-img" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80" alt="Harbour View Hotel" loading="lazy">
+        <strong>Welcome to Harbour View Hotel!</strong><br>
+        I'm your concierge. Ask me about rooms, packages, dining, spa, meetings, or anything else.<br><br>
+        <span style="font-size:.82rem;color:#888">Try: <i class="fas fa-building" style="color:#C4956A;width:14px"></i> "Family rooms"  <i class="fas fa-tag" style="color:#C4956A;margin-left:10px"></i> "Midweek offers"</span>
+      </div>
+    </div>
+
+    <div id="typing"><span></span><span></span><span></span></div>
+
+    <div id="inputBar">
+      <input id="input" type="text" placeholder="Ask your concierge..." autofocus>
+      <button id="send"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right">
+    <div id="right-header">
+      <h3><i class="fas fa-hotel" style="margin-right:6px"></i> Services &amp; Rates</h3>
+      <p><span id="refCount">0 services loaded</span></p>
+    </div>
+    <div id="refBody">
+      <div id="refEmpty"><i class="fas fa-spinner fa-spin" style="font-size:1.2rem;color:#C4956A;display:block;margin-bottom:10px"></i>Loading services from the hotel database...</div>
+    </div>
+    <div id="mcpPanel">
+      <h4><i class="fas fa-project-diagram" style="margin-right:4px"></i> MCP Protocol</h4>
+      <div id="mcpFlow"><div id="mcpEmpty">Waiting for your question...</div></div>
+    </div>
+    <div id="footer">Powered by <a href="https://docs.google.com/spreadsheets/d/1RzwstN-LofU3iSag4bQHzCPIjnmoXgZTYQmbz19ZxAo" target="_blank">Live Sheet</a> · <a href="https://groq.com" target="_blank">Groq AI</a></div>
+  </div>
+
+</div>
+
+<div id="toast"><i class="fas fa-check-circle"></i> <span id="toastMsg">Booking enquiry sent!</span></div>
+
+<script>
+// ============================================================
+//  CONFIG
+// ============================================================
+const SHEET_ID = '1RzwstN-LofU3iSag4bQHzCPIjnmoXgZTYQmbz19ZxAo';
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+const GROQ_KEY = '';
+const GROQ_MODEL = 'llama3-70b-8192';
+
+
+const FALLBACK_DATA = [{"rate_id": "HVH-032", "item_name": "Elopement Package", "category": "Packages", "applies_to": "2 guests", "price_eur": "950", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "Mon-Thu", "slots_this_week": "1", "special_offer": "", "description": "A small ceremony on the terrace for up to eight guests, with a suite for two nights."}, {"rate_id": "HVH-065", "item_name": "Conference Suite (up to 120)", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "950", "unit": "per day", "capacity": "120", "requires_booking": "Yes", "availability": "Mon-Sat", "slots_this_week": "1", "special_offer": "", "description": "The ballroom set for a conference, with a stage, lectern and PA."}, {"rate_id": "HVH-031", "item_name": "Long Stay (7 nights)", "category": "Packages", "applies_to": "2 guests", "price_eur": "799", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "20% off the nightly rate", "description": "Seven nights in a Classic Double with a weekly housekeeping schedule."}, {"rate_id": "HVH-029", "item_name": "New Year Package (2 nights)", "category": "Packages", "applies_to": "2 guests", "price_eur": "549", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "30 Dec-1 Jan", "slots_this_week": "4", "special_offer": "", "description": "Two nights, gala dinner, live music and a champagne breakfast."}, {"rate_id": "HVH-064", "item_name": "Meeting Room (up to 40)", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "480", "unit": "per day", "capacity": "40", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "2", "special_offer": "", "description": "The larger meeting room, set theatre, cabaret or boardroom style."}, {"rate_id": "HVH-075", "item_name": "Civil Ceremony Room", "category": "Meetings & Events", "applies_to": "Weddings", "price_eur": "450", "unit": "per event", "capacity": "120", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "0", "special_offer": "", "description": "The ceremony itself, held on site, with chairs, flowers and a registrar's table."}, {"rate_id": "HVH-019", "item_name": "Harbour Penthouse", "category": "Rooms", "applies_to": "2 guests", "price_eur": "425", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "1", "special_offer": "", "description": "The corner suite: wraparound windows, freestanding bath and a private terrace."}, {"rate_id": "HVH-027", "item_name": "Golf Break (2 nights + 2 rounds)", "category": "Packages", "applies_to": "2 guests", "price_eur": "395", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "", "description": "Two nights with breakfast and two rounds at the links course ten minutes away."}, {"rate_id": "HVH-026", "item_name": "Family Fun Package (2 nights)", "category": "Packages", "applies_to": "Families", "price_eur": "379", "unit": "per package", "capacity": "4", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "3", "special_offer": "Kids eat free", "description": "Two nights in a Family Room, breakfast, and family passes to the pool."}, {"rate_id": "HVH-025", "item_name": "Spa Escape (1 night + 2 treatments)", "category": "Packages", "applies_to": "2 guests", "price_eur": "349", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "3", "special_offer": "", "description": "One night, breakfast, and a 50-minute treatment each in the harbour spa."}, {"rate_id": "HVH-022", "item_name": "Midweek Escape Plus (2 nights, dinner B&B)", "category": "Packages", "applies_to": "2 guests", "price_eur": "329", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "Sun-Thu", "slots_this_week": "4", "special_offer": "Save EUR 55 vs booking separately", "description": "Two midweek nights with breakfast and a three-course dinner on one evening."}, {"rate_id": "HVH-023", "item_name": "Weekend Break (2 nights, B&B)", "category": "Packages", "applies_to": "2 guests", "price_eur": "329", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "Fri-Sun", "slots_this_week": "5", "special_offer": "", "description": "Two weekend nights in a Superior Double with breakfast each morning."}, {"rate_id": "HVH-062", "item_name": "Meeting Room (up to 20)", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "320", "unit": "per day", "capacity": "20", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "3", "special_offer": "10% off for two or more bookings", "description": "A bright first-floor room with a screen, flipchart and natural light."}, {"rate_id": "HVH-018", "item_name": "Executive Suite", "category": "Rooms", "applies_to": "2 guests", "price_eur": "299", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "", "description": "Top-floor suite with a lounge, a work desk and a full harbour view."}, {"rate_id": "HVH-024", "item_name": "Romance Package", "category": "Packages", "applies_to": "2 guests", "price_eur": "289", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "4", "special_offer": "Complimentary late checkout", "description": "One night in a Sea View room with prosecco, chocolates and a late checkout."}, {"rate_id": "HVH-066", "item_name": "Training Room (up to 16)", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "280", "unit": "per day", "capacity": "16", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "3", "special_offer": "", "description": "A U-shaped room with power at every seat, for a full-day course."}, {"rate_id": "HVH-030", "item_name": "Stay 3, Pay 2", "category": "Packages", "applies_to": "2 guests", "price_eur": "278", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "Sun-Thu", "slots_this_week": "4", "special_offer": "Third night free", "description": "Three midweek nights for the price of two, in a Classic Double, room only."}, {"rate_id": "HVH-015", "item_name": "Interconnecting Family Rooms", "category": "Rooms", "applies_to": "Families", "price_eur": "259", "unit": "per night", "capacity": "6", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "", "description": "Two doubles joined by an internal door, for larger families or two couples."}, {"rate_id": "HVH-017", "item_name": "Junior Suite", "category": "Rooms", "applies_to": "2 guests", "price_eur": "249", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "3", "special_offer": "", "description": "A separate sitting room, a king bed and a harbour-facing balcony."}, {"rate_id": "HVH-021", "item_name": "Midweek Escape (2 nights, B&B)", "category": "Packages", "applies_to": "2 guests", "price_eur": "239", "unit": "per package", "capacity": "2", "requires_booking": "Yes", "availability": "Sun-Thu", "slots_this_week": "6", "special_offer": "Save EUR 39 vs booking separately", "description": "Two midweek nights in a Classic Double with breakfast each morning."}, {"rate_id": "HVH-016", "item_name": "Family Sea View", "category": "Rooms", "applies_to": "Families", "price_eur": "229", "unit": "per night", "capacity": "4", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "", "description": "A family room facing the harbour, with a window seat the children fight over."}, {"rate_id": "HVH-011", "item_name": "Superior Sea View", "category": "Rooms", "applies_to": "2 guests", "price_eur": "219", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "Fri-Sat", "slots_this_week": "2", "special_offer": "", "description": "King bed with a full harbour view, robes and slippers, and a Nespresso machine."}, {"rate_id": "HVH-014", "item_name": "Family Room (2 adults + 3 children)", "category": "Rooms", "applies_to": "Families", "price_eur": "219", "unit": "per night", "capacity": "5", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "Kids stay free Sun-Thu", "description": "A larger family room with a king bed, a sofa bed and a single bed."}, {"rate_id": "HVH-050", "item_name": "Couples Treatment Room (75 min)", "category": "Spa & Leisure", "applies_to": "2 guests", "price_eur": "210", "unit": "per treatment", "capacity": "2", "requires_booking": "Yes", "availability": "Daily 10-19", "slots_this_week": "3", "special_offer": "", "description": "Two therapists, one room, side by side."}, {"rate_id": "HVH-063", "item_name": "Meeting Room (up to 20), half day", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "190", "unit": "per half day", "capacity": "20", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "4", "special_offer": "", "description": "The 20-person room for a morning or an afternoon."}, {"rate_id": "HVH-010", "item_name": "Superior Sea View", "category": "Rooms", "applies_to": "2 guests", "price_eur": "189", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "4", "special_offer": "", "description": "King bed with a full harbour view, robes and slippers, and a Nespresso machine."}, {"rate_id": "HVH-012", "item_name": "Family Room (2 adults + 2 children)", "category": "Rooms", "applies_to": "Families", "price_eur": "189", "unit": "per night", "capacity": "4", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "4", "special_offer": "Kids stay free Sun-Thu", "description": "One king bed plus a sofa bed, room for two children under 12, and a bath."}, {"rate_id": "HVH-068", "item_name": "24-Hour Delegate Rate", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "185", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "0", "special_offer": "", "description": "The day delegate rate plus dinner, an overnight room and breakfast."}, {"rate_id": "HVH-060", "item_name": "Boardroom (up to 8)", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "180", "unit": "per day", "capacity": "8", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "4", "special_offer": "", "description": "A private boardroom with a screen, whiteboard and unlimited coffee."}, {"rate_id": "HVH-007", "item_name": "Superior Double", "category": "Rooms", "applies_to": "2 guests", "price_eur": "169", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "5", "special_offer": "", "description": "A larger double with a king bed, seating area and partial harbour view."}, {"rate_id": "HVH-009", "item_name": "Superior Twin", "category": "Rooms", "applies_to": "2 guests", "price_eur": "169", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "3", "special_offer": "", "description": "A larger twin room with a seating area and partial harbour view."}, {"rate_id": "HVH-013", "item_name": "Family Room (2 adults + 2 children)", "category": "Rooms", "applies_to": "Families", "price_eur": "165", "unit": "per night", "capacity": "4", "requires_booking": "Yes", "availability": "Sun-Thu", "slots_this_week": "5", "special_offer": "Kids stay free Sun-Thu", "description": "One king bed plus a sofa bed, room for two children under 12, and a bath."}, {"rate_id": "HVH-020", "item_name": "Dog-Friendly Ground Floor Double", "category": "Rooms", "applies_to": "2 guests + dog", "price_eur": "155", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "", "description": "A ground-floor double with direct garden access, for guests travelling with a dog."}, {"rate_id": "HVH-008", "item_name": "Superior Double", "category": "Rooms", "applies_to": "2 guests", "price_eur": "149", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "Sun-Thu", "slots_this_week": "6", "special_offer": "Midweek Saver: 15% off Sun-Thu", "description": "A larger double with a king bed, seating area and partial harbour view."}, {"rate_id": "HVH-070", "item_name": "Hybrid Meeting Kit", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "140", "unit": "per day", "capacity": "0", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "0", "special_offer": "", "description": "A camera, speakerphone and a wired connection, for remote attendees."}, {"rate_id": "HVH-001", "item_name": "Classic Double", "category": "Rooms", "applies_to": "2 guests", "price_eur": "139", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "6", "special_offer": "", "description": "A comfortable double room with a queen bed, walk-in shower and a courtyard outlook."}, {"rate_id": "HVH-003", "item_name": "Classic Twin", "category": "Rooms", "applies_to": "2 guests", "price_eur": "139", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "4", "special_offer": "", "description": "Two single beds, ideal for friends or colleagues travelling together."}, {"rate_id": "HVH-006", "item_name": "Accessible Double", "category": "Rooms", "applies_to": "2 guests", "price_eur": "139", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "2", "special_offer": "", "description": "Step-free double room with a wet room, grab rails and a wider doorway."}, {"rate_id": "HVH-047", "item_name": "Hot Stone Massage (75 min)", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "120", "unit": "per treatment", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 10-19", "slots_this_week": "4", "special_offer": "", "description": "Heated basalt stones worked along the back and shoulders."}, {"rate_id": "HVH-076", "item_name": "Wedding Menu Tasting", "category": "Meetings & Events", "applies_to": "Weddings", "price_eur": "120", "unit": "per couple", "capacity": "2", "requires_booking": "Yes", "availability": "Mon-Thu", "slots_this_week": "2", "special_offer": "Refunded on booking", "description": "Two people taste the full menu before choosing it."}, {"rate_id": "HVH-002", "item_name": "Classic Double", "category": "Rooms", "applies_to": "2 guests", "price_eur": "119", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "Sun-Thu", "slots_this_week": "8", "special_offer": "Midweek Saver: 15% off Sun-Thu", "description": "A comfortable double room with a queen bed, walk-in shower and a courtyard outlook."}, {"rate_id": "HVH-004", "item_name": "Classic Twin", "category": "Rooms", "applies_to": "2 guests", "price_eur": "119", "unit": "per night", "capacity": "2", "requires_booking": "Yes", "availability": "Sun-Thu", "slots_this_week": "5", "special_offer": "Midweek Saver: 15% off Sun-Thu", "description": "Two single beds, ideal for friends or colleagues travelling together."}, {"rate_id": "HVH-061", "item_name": "Boardroom (up to 8), half day", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "110", "unit": "per half day", "capacity": "8", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "5", "special_offer": "", "description": "The boardroom for a morning or an afternoon."}, {"rate_id": "HVH-005", "item_name": "Single Room", "category": "Rooms", "applies_to": "1 guest", "price_eur": "99", "unit": "per night", "capacity": "1", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "5", "special_offer": "", "description": "A compact single room for the solo traveller, with a desk and fast Wi-Fi."}, {"rate_id": "HVH-046", "item_name": "Deep Tissue Massage (50 min)", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "95", "unit": "per treatment", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 10-19", "slots_this_week": "7", "special_offer": "", "description": "Firmer pressure for shoulders, back and the knots you brought with you."}, {"rate_id": "HVH-073", "item_name": "Wedding (up to 120)", "category": "Meetings & Events", "applies_to": "Weddings", "price_eur": "95", "unit": "per person", "capacity": "120", "requires_booking": "Yes", "availability": "Fri-Sun", "slots_this_week": "0", "special_offer": "Complimentary suite for the couple", "description": "The ballroom, a drinks reception, a four-course meal and an evening buffet."}, {"rate_id": "HVH-048", "item_name": "Signature Facial (50 min)", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "90", "unit": "per treatment", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 10-19", "slots_this_week": "6", "special_offer": "15% off Mon-Wed", "description": "A cleanse, exfoliation and mask, matched to your skin on the day."}, {"rate_id": "HVH-069", "item_name": "AV Package (projector, screen, mics)", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "90", "unit": "per day", "capacity": "0", "requires_booking": "Yes", "availability": "Mon-Sat", "slots_this_week": "0", "special_offer": "Free with the Day Delegate Rate", "description": "Projector, screen, two radio mics and a technician on call."}, {"rate_id": "HVH-074", "item_name": "Wedding (up to 60)", "category": "Meetings & Events", "applies_to": "Weddings", "price_eur": "89", "unit": "per person", "capacity": "60", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "0", "special_offer": "", "description": "A smaller wedding in the conservatory, with a terrace for the reception."}, {"rate_id": "HVH-045", "item_name": "Swedish Massage (50 min)", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "85", "unit": "per treatment", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 10-19", "slots_this_week": "9", "special_offer": "", "description": "A full-body relaxation massage with warm oil."}, {"rate_id": "HVH-086", "item_name": "Airport Transfer (Ireland West Knock)", "category": "Extras", "applies_to": "All guests", "price_eur": "75", "unit": "per journey", "capacity": "4", "requires_booking": "Yes", "availability": "Daily", "slots_this_week": "4", "special_offer": "", "description": "A car to or from Ireland West Airport Knock, about 55 minutes."}, {"rate_id": "HVH-028", "item_name": "Christmas Party Night", "category": "Packages", "applies_to": "Groups", "price_eur": "65", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Dec Fri-Sat", "slots_this_week": "0", "special_offer": "Fully booked for 2026", "description": "Four-course dinner, a DJ and a late bar in the ballroom."}, {"rate_id": "HVH-044", "item_name": "Private Dining (up to 14)", "category": "Dining", "applies_to": "Groups", "price_eur": "65", "unit": "per person", "capacity": "14", "requires_booking": "Yes", "availability": "By arrangement", "slots_this_week": "2", "special_offer": "", "description": "The wine room, a set menu and a dedicated server, for a private party."}, {"rate_id": "HVH-058", "item_name": "Personal Training (60 min)", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "60", "unit": "per session", "capacity": "0", "requires_booking": "Yes", "availability": "Mon-Sat 7-19", "slots_this_week": "5", "special_offer": "", "description": "One-to-one with the hotel's trainer, in the gym or on the coast path."}, {"rate_id": "HVH-049", "item_name": "Express Facial (25 min)", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "55", "unit": "per treatment", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 10-19", "slots_this_week": "8", "special_offer": "15% off Mon-Wed", "description": "A short facial for a tired face before dinner."}, {"rate_id": "HVH-052", "item_name": "Pedicure", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "55", "unit": "per treatment", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 10-18", "slots_this_week": "5", "special_offer": "", "description": "A soak, scrub and polish, with a short foot massage."}, {"rate_id": "HVH-067", "item_name": "Day Delegate Rate", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "55", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "0", "special_offer": "", "description": "Room hire, two coffee breaks, a working lunch and all AV, per delegate."}, {"rate_id": "HVH-051", "item_name": "Manicure", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "45", "unit": "per treatment", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 10-18", "slots_this_week": "6", "special_offer": "", "description": "A file, shape and polish in the spa's nail room."}, {"rate_id": "HVH-053", "item_name": "Spa Day Pass", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "45", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 8-20", "slots_this_week": "12", "special_offer": "", "description": "Pool, sauna, steam room and the outdoor hot tub, for a full day."}, {"rate_id": "HVH-035", "item_name": "Three-Course Dinner", "category": "Dining", "applies_to": "All guests", "price_eur": "42", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 18-21:30", "slots_this_week": "0", "special_offer": "Included in dinner B&B rates", "description": "The harbour restaurant's set menu, changed weekly around the day's landing."}, {"rate_id": "HVH-039", "item_name": "Sparkling Afternoon Tea", "category": "Dining", "applies_to": "All guests", "price_eur": "39", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 14-17", "slots_this_week": "0", "special_offer": "", "description": "Afternoon tea with a glass of prosecco on arrival."}, {"rate_id": "HVH-042", "item_name": "Picnic Hamper", "category": "Dining", "applies_to": "All guests", "price_eur": "35", "unit": "per hamper", "capacity": "0", "requires_booking": "Yes", "availability": "Daily", "slots_this_week": "0", "special_offer": "", "description": "A packed lunch for two for the coast walk: sandwiches, fruit, flask, blanket."}, {"rate_id": "HVH-088", "item_name": "Kayak Hire", "category": "Extras", "applies_to": "Adults", "price_eur": "35", "unit": "per half day", "capacity": "0", "requires_booking": "Yes", "availability": "Apr-Sep", "slots_this_week": "6", "special_offer": "", "description": "A sit-on kayak from the pier, life jacket included, weather permitting."}, {"rate_id": "HVH-037", "item_name": "Sunday Lunch", "category": "Dining", "applies_to": "All guests", "price_eur": "32", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Sun 12:30-15:00", "slots_this_week": "0", "special_offer": "", "description": "A traditional roast with a starter and dessert, in the conservatory."}, {"rate_id": "HVH-054", "item_name": "Thermal Suite (2 hours)", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "30", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 8-20", "slots_this_week": "14", "special_offer": "", "description": "Sauna, steam room and experience showers, without the full day pass."}, {"rate_id": "HVH-082", "item_name": "Extra Bed", "category": "Extras", "applies_to": "Families", "price_eur": "30", "unit": "per night", "capacity": "0", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "4", "special_offer": "", "description": "A rollaway single bed, in rooms that have space for it."}, {"rate_id": "HVH-038", "item_name": "Afternoon Tea", "category": "Dining", "applies_to": "All guests", "price_eur": "29", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 14-17", "slots_this_week": "0", "special_offer": "2 for 1 on Tuesdays", "description": "Sandwiches, scones and cakes on a three-tier stand, with tea or coffee."}, {"rate_id": "HVH-079", "item_name": "Early Check-In (from 12:00)", "category": "Extras", "applies_to": "All guests", "price_eur": "25", "unit": "per stay", "capacity": "0", "requires_booking": "Yes", "availability": "Subject to availability", "slots_this_week": "6", "special_offer": "", "description": "Get into the room from midday instead of 15:00."}, {"rate_id": "HVH-080", "item_name": "Late Checkout (until 14:00)", "category": "Extras", "applies_to": "All guests", "price_eur": "25", "unit": "per stay", "capacity": "0", "requires_booking": "Yes", "availability": "Subject to availability", "slots_this_week": "6", "special_offer": "Free with the Romance Package", "description": "Keep the room until 14:00 instead of 11:00."}, {"rate_id": "HVH-085", "item_name": "Dog Stay", "category": "Extras", "applies_to": "2 guests + dog", "price_eur": "25", "unit": "per night", "capacity": "0", "requires_booking": "Yes", "availability": "Ground-floor rooms", "slots_this_week": "2", "special_offer": "", "description": "One dog per room, with a bed, bowls and a towel for the beach."}, {"rate_id": "HVH-071", "item_name": "Working Lunch", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "22", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Mon-Fri", "slots_this_week": "0", "special_offer": "", "description": "Sandwiches, soup, fruit and coffee, served in the meeting room."}, {"rate_id": "HVH-087", "item_name": "Bike Hire", "category": "Extras", "applies_to": "All guests", "price_eur": "20", "unit": "per day", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 8-19", "slots_this_week": "8", "special_offer": "", "description": "A hybrid bike, helmet and a map of the greenway."}, {"rate_id": "HVH-033", "item_name": "Full Irish Breakfast", "category": "Dining", "applies_to": "All guests", "price_eur": "18", "unit": "per person", "capacity": "0", "requires_booking": "No", "availability": "Daily 7-10:30", "slots_this_week": "0", "special_offer": "Included in all B&B rates", "description": "A cooked breakfast with a buffet of pastries, fruit and cereals."}, {"rate_id": "HVH-059", "item_name": "Yoga Class", "category": "Spa & Leisure", "applies_to": "Adults", "price_eur": "18", "unit": "per class", "capacity": "12", "requires_booking": "Yes", "availability": "Sat-Sun 8:30", "slots_this_week": "10", "special_offer": "", "description": "A 45-minute morning class in the studio overlooking the water."}, {"rate_id": "HVH-090", "item_name": "Laundry Service", "category": "Extras", "applies_to": "All guests", "price_eur": "18", "unit": "per bag", "capacity": "0", "requires_booking": "No", "availability": "Mon-Fri", "slots_this_week": "0", "special_offer": "", "description": "Same-day wash and press if handed in before 09:00."}, {"rate_id": "HVH-089", "item_name": "Guided Coast Walk", "category": "Extras", "applies_to": "All guests", "price_eur": "15", "unit": "per person", "capacity": "12", "requires_booking": "Yes", "availability": "Sat 10:00", "slots_this_week": "10", "special_offer": "Free for residents", "description": "A two-hour guided walk along the headland with a local guide."}, {"rate_id": "HVH-034", "item_name": "Continental Breakfast", "category": "Dining", "applies_to": "All guests", "price_eur": "13", "unit": "per person", "capacity": "0", "requires_booking": "No", "availability": "Daily 7-10:30", "slots_this_week": "0", "special_offer": "", "description": "Pastries, fruit, yoghurt, cheese and unlimited coffee."}, {"rate_id": "HVH-040", "item_name": "Children's Menu", "category": "Dining", "applies_to": "Under 12s", "price_eur": "12", "unit": "per child", "capacity": "0", "requires_booking": "No", "availability": "Daily 17-20", "slots_this_week": "0", "special_offer": "Kids eat free with the Family Fun Package", "description": "A short menu of smaller portions, with a fruit or ice cream to finish."}, {"rate_id": "HVH-078", "item_name": "EV Charging", "category": "Extras", "applies_to": "All guests", "price_eur": "8", "unit": "per session", "capacity": "0", "requires_booking": "No", "availability": "24 hours", "slots_this_week": "4", "special_offer": "", "description": "Four 22kW chargers in the car park, paid at reception."}, {"rate_id": "HVH-072", "item_name": "Coffee Break", "category": "Meetings & Events", "applies_to": "Business", "price_eur": "6", "unit": "per person", "capacity": "0", "requires_booking": "No", "availability": "Mon-Fri", "slots_this_week": "0", "special_offer": "", "description": "Coffee, tea and something baked that morning."}, {"rate_id": "HVH-055", "item_name": "Pool Access (guests)", "category": "Spa & Leisure", "applies_to": "All guests", "price_eur": "0", "unit": "included", "capacity": "0", "requires_booking": "No", "availability": "Daily 7-21", "slots_this_week": "0", "special_offer": "Free for residents", "description": "The 18-metre pool, included in every room rate."}, {"rate_id": "HVH-056", "item_name": "Family Swim Session", "category": "Spa & Leisure", "applies_to": "Families", "price_eur": "0", "unit": "included", "capacity": "0", "requires_booking": "No", "availability": "Daily 10-12, 15-17", "slots_this_week": "0", "special_offer": "Free for residents", "description": "The pool hours when under-16s are welcome."}, {"rate_id": "HVH-057", "item_name": "Gym Access", "category": "Spa & Leisure", "applies_to": "All guests", "price_eur": "0", "unit": "included", "capacity": "0", "requires_booking": "No", "availability": "24 hours", "slots_this_week": "0", "special_offer": "Free for residents", "description": "A small gym with cardio machines, free weights and a rowing machine."}, {"rate_id": "HVH-077", "item_name": "Car Parking", "category": "Extras", "applies_to": "All guests", "price_eur": "0", "unit": "per night", "capacity": "0", "requires_booking": "No", "availability": "24 hours", "slots_this_week": "0", "special_offer": "Free for residents", "description": "On-site parking for 80 cars, free for anyone staying the night."}, {"rate_id": "HVH-081", "item_name": "Cot / Travel Crib", "category": "Extras", "applies_to": "Families", "price_eur": "0", "unit": "per night", "capacity": "0", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "5", "special_offer": "Free", "description": "A travel cot set up in the room before you arrive."}, {"rate_id": "HVH-083", "item_name": "Baby Pack (bottle warmer, steriliser)", "category": "Extras", "applies_to": "Families", "price_eur": "0", "unit": "per stay", "capacity": "0", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "3", "special_offer": "Free", "description": "The gear you did not want to pack, waiting in the room."}, {"rate_id": "HVH-084", "item_name": "Kids Club (Sat-Sun mornings)", "category": "Extras", "applies_to": "Under 12s", "price_eur": "0", "unit": "per session", "capacity": "15", "requires_booking": "Yes", "availability": "Sat-Sun 10:00-13:00", "slots_this_week": "15", "special_offer": "Free for residents", "description": "Supervised games and crafts, so the adults get a slow breakfast."}, {"rate_id": "HVH-091", "item_name": "Luggage Storage", "category": "Extras", "applies_to": "All guests", "price_eur": "0", "unit": "per stay", "capacity": "0", "requires_booking": "No", "availability": "24 hours", "slots_this_week": "0", "special_offer": "Free", "description": "Leave bags at reception before check-in or after checkout."}, {"rate_id": "HVH-093", "item_name": "Travel Cot Blackout Blind", "category": "Extras", "applies_to": "Families", "price_eur": "0", "unit": "per stay", "capacity": "0", "requires_booking": "Yes", "availability": "All week", "slots_this_week": "4", "special_offer": "Free", "description": "A portable blackout blind, because the room is bright at 5am in June."}, {"rate_id": "HVH-036", "item_name": "A la Carte Dinner", "category": "Dining", "applies_to": "All guests", "price_eur": "", "unit": "per person", "capacity": "0", "requires_booking": "Yes", "availability": "Daily 18-21:30", "slots_this_week": "0", "special_offer": "", "description": "Priced per dish. Seafood, steaks and a vegetarian menu of equal length."}, {"rate_id": "HVH-041", "item_name": "Room Service", "category": "Dining", "applies_to": "All guests", "price_eur": "", "unit": "per order", "capacity": "0", "requires_booking": "No", "availability": "Daily 7-23", "slots_this_week": "0", "special_offer": "", "description": "A reduced menu delivered to the room. A EUR 5 tray charge applies."}, {"rate_id": "HVH-043", "item_name": "Bar Snacks", "category": "Dining", "applies_to": "All guests", "price_eur": "", "unit": "per dish", "capacity": "0", "requires_booking": "No", "availability": "Daily 12-21", "slots_this_week": "0", "special_offer": "", "description": "Chowder, sandwiches and small plates served in the harbour bar."}, {"rate_id": "HVH-092", "item_name": "Meeting Printing", "category": "Extras", "applies_to": "Business", "price_eur": "", "unit": "per page", "capacity": "0", "requires_booking": "No", "availability": "Mon-Fri", "slots_this_week": "0", "special_offer": "First 50 pages free", "description": "Black and white printing at reception, EUR 0.20 a page after the first 50."}];
+
+const CATEGORIES = ['Rooms','Packages','Dining','Spa & Leisure','Meetings & Events','Extras'];
+
+const UNSplash = {
+  'Rooms':'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=300&q=80',
+  'Packages':'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=300&q=80',
+  'Dining':'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=300&q=80',
+  'Spa & Leisure':'https://images.unsplash.com/photo-1540555700478-4be289fbec6d?w=300&q=80',
+  'Meetings & Events':'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=300&q=80',
+  'Extras':'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&q=80'
+};
+
+// ── Quick pills ──
+const PILLS = [
+  {label:'Family Rooms',icon:'fa-users',cat:'Rooms',kw:'family'},
+  {label:'Midweek Offers',icon:'fa-tag',cat:'offers'},
+  {label:'Meeting Room 20',icon:'fa-building',cat:'Meetings & Events'},
+  {label:'Sea View',icon:'fa-water',cat:'Rooms',kw:'sea'},
+  {label:'Spa & Leisure',icon:'fa-spa',cat:'Spa & Leisure'},
+  {label:'Dining',icon:'fa-utensils',cat:'Dining'},
+  {label:'Pets Welcome',icon:'fa-paw',cat:'Extras',kw:'pet'},
+  {label:'Prices',icon:'fa-euro-sign',cat:'prices'}
+];
+
+const TAGLINES = [
+  "Your personal concierge, ready to help",
+  "90+ rates and packages — live from the hotel",
+  "Ask about rooms, dining, spa, meetings & more",
+  "Every answer comes from today's live data",
+  "Family rooms, midweek deals, sea views — just ask",
+  "4-star luxury on the Wild Atlantic Way"
+];
+
+const AWNING_ITEMS = [
+  {icon:'fa-hotel',text:'93 rates & packages'},
+  {icon:'fa-bed',text:'20 room types'},
+  {icon:'fa-utensils',text:'12 dining options'},
+  {icon:'fa-spa',text:'15 spa treatments'},
+  {icon:'fa-building',text:'17 meeting spaces'},
+  {icon:'fa-dog',text:'Pet-friendly rooms'},
+  {icon:'fa-wifi',text:'Free WiFi throughout'},
+  {icon:'fa-car',text:'Free parking'},
+  {icon:'fa-water',text:'Sea-view suites'},
+  {icon:'fa-mountain',text:'Croagh Patrick views'}
+];
+
+// ============================================================
+//  STATE
+// ============================================================
+let allData = [];
+let catMap = {};
+let isSending = false;
+
+// ============================================================
+//  DOM REFS
+// ============================================================
+const chat = document.getElementById('chat');
+const input = document.getElementById('input');
+const typing = document.getElementById('typing');
+const refBody = document.getElementById('refBody');
+const refEmpty = document.getElementById('refEmpty');
+const refCount = document.getElementById('refCount');
+const mcpFlow = document.getElementById('mcpFlow');
+const mcpEmpty = document.getElementById('mcpEmpty');
+const taglineEl = document.getElementById('tagline');
+const sendBtn = document.getElementById('send');
+const awningInner = document.getElementById('awning-inner');
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+const loadSub = document.getElementById('loadSub');
+const pills = document.getElementById('pills');
+const avatar = document.getElementById('avatar');
+
+// ============================================================
+//  INIT
+// ============================================================
+function buildPills(){
+  PILLS.forEach(p=>{
+    const btn=document.createElement('button');btn.className='pill';
+    btn.innerHTML=`<i class="fas ${p.icon}"></i> ${p.label}`;
+    btn.addEventListener('click',()=>handleCommand(p.label));
+    pills.appendChild(btn);
+  });
+}
+function buildAwning(){
+  const doubled=[...AWNING_ITEMS,...AWNING_ITEMS];
+  awningInner.innerHTML=doubled.map(a=>`<span><i class="fas ${a.icon}"></i>${a.text}</span>`).join('');
+}
+function initTaglines(){
+  let idx=0;
+  setInterval(()=>{
+    taglineEl.classList.add('fade');
+    setTimeout(()=>{
+      idx=(idx+1)%TAGLINES.length;
+      taglineEl.textContent=TAGLINES[idx];
+      taglineEl.classList.remove('fade');
+    },350);
+  },5000);
+}
+
+// ============================================================
+//  LOADING
+// ============================================================
+function showLoad(t){loadSub.textContent=t}
+function hideLoad(){document.getElementById('loading').classList.add('hide')}
+
+// ============================================================
+//  FETCH SHEET
+// ============================================================
+const FETCH_URLS = [
+  CSV_URL,
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(CSV_URL)}`,
+  `https://corsproxy.io/?url=${encodeURIComponent(CSV_URL)}`
+];
+
+async function fetchSheet(){
+  showLoad('Connecting to hotel database...');
+  for(const url of FETCH_URLS){
+    try{
+      const r=await fetch(url,{mode:'cors'});
+      if(!r.ok)continue;
+      const csv=await r.text();
+      const parsed=parseCSV(csv);
+      if(parsed.length>5){
+        allData=parsed;
+        buildMaps();
+        showLoad('Ready!');
+        setTimeout(hideLoad,500);
+        refCount.textContent=`${allData.length} services loaded`;
+        updateEmptyState();
+        console.log(`Loaded ${allData.length} services`);
+        return;
+      }
+    }catch(e){console.log('Fetch failed',url,e)}
+  }
+  // Fallback
+  setTimeout(hideLoad,800);
+  allData = FALLBACK_DATA;
+  buildMaps();
+  refCount.textContent=`${allData.length} services loaded`;
+  updateEmptyState();
+  console.warn('Using embedded fallback data');
+}
+
+function parseCSV(csv){
+  const lines=csv.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2)return[];
+  const h=lines[0].split(',').map(x=>x.trim().replace(/^"|"$/g,'')).filter(Boolean);
+  return lines.slice(1).map(line=>{
+    const vals=[];let c='',q=false;
+    for(const ch of line){
+      if(ch==='"'){q=!q;continue}
+      if(ch===','&&!q){vals.push(c.trim());c='';continue}
+      c+=ch;
+    }
+    vals.push(c.trim());
+    const o={};
+    h.forEach((k,i)=>o[k]=vals[i]||'');
+    return o;
+  }).filter(r=>r.rate_id);
+}
+
+function buildMaps(){
+  catMap={};
+  CATEGORIES.forEach(c=>catMap[c]=[]);
+  allData.forEach(r=>{
+    const cat=r.category||'Extras';
+    if(catMap[cat])catMap[cat].push(r);
+    else catMap[cat]=[r];
+  });
+}
+
+function updateEmptyState(){
+  if(allData.length===0){
+    refEmpty.innerHTML='<i class="fas fa-database" style="font-size:1.2rem;color:#C4956A;display:block;margin-bottom:10px"></i>No services loaded yet. Ask a question!';
+  }
+}
+
+// ============================================================
+//  PRICE HELPERS
+// ============================================================
+function priceToEuro(v){
+  const n=parseFloat(v||'0');
+  if(isNaN(n))return 0;
+  return n>=1000?n/100:n;
+}
+function fmtPrice(v){
+  const e=priceToEuro(v);
+  if(e===0)return '0';
+  return e===Math.floor(e)?String(e):e.toFixed(2);
+}
+
+// ============================================================
+//  MCP QUERY ENGINE
+// ============================================================
+function mcpQuery(resource){
+  const parts=resource.replace('mcp-hotel://','').split('/');
+  if(parts[0]==='services'){
+    if(parts[1]==='cat'&&parts[2])return catMap[parts[2]]||[];
+    if(parts[1]==='applies'&&parts[2])return allData.filter(r=>r.applies_to&&r.applies_to.toLowerCase()===parts[2].toLowerCase());
+    return allData;
+  }
+  if(parts[0]==='offers')return allData.filter(r=>r.special_offer&&r.special_offer.trim());
+  if(parts[0]==='rooms'&&parts[1]==='family')return allData.filter(r=>r.category==='Rooms'&&(r.item_name.toLowerCase().includes('family')||r.applies_to==='Families'));
+  if(parts[0]==='capacity'&&parts[1]){
+    const n=parseInt(parts[1]);if(isNaN(n))return[];
+    return allData.filter(r=>{
+      const cap=parseInt(r.capacity);return!isNaN(cap)&&cap>=n;
+    });
+  }
+  if(parts[0]==='slots'&&parts[1]==='available')return allData.filter(r=>parseInt(r.slots_this_week||'0')>0);
+  return [];
+}
+
+// ============================================================
+//  MCP VISUALIZATION
+// ============================================================
+function clearMCP(){mcpFlow.innerHTML='';mcpEmpty.style.display='none'}
+function addMCPStep(icon,label,detail,cls){
+  mcpEmpty.style.display='none';
+  const d=document.createElement('div');d.className='mcp-step';
+  d.innerHTML=`<span class="icon ${cls}"><i class="fas ${icon}"></i></span><span class="label">${label}</span>${detail?`<span class="detail">${detail}</span>`:''}`;
+  mcpFlow.appendChild(d);mcpFlow.scrollTop=mcpFlow.scrollHeight;
+}
+function addMCPArrow(){const d=document.createElement('span');d.className='mcp-arrow';d.innerHTML='<i class="fas fa-chevron-down"></i>';mcpFlow.appendChild(d);mcpFlow.scrollTop=mcpFlow.scrollHeight}
+function delay(ms){return new Promise(r=>setTimeout(r,ms))}
+
+async function runMCPFlow(query,results){
+  clearMCP();
+  addMCPStep('fa-search','Discover','MCP Hotel Server','discover');await delay(120);
+  addMCPArrow();
+
+  const cats=Object.keys(catMap).filter(k=>catMap[k].length>0).length;
+  addMCPStep('fa-clipboard-list','Discover',`${allData.length} rates · ${cats} categories`,'discover');await delay(100);
+
+  let label='mcp-hotel://services';
+  const lq=query.toLowerCase();
+  if(lq.includes('family'))label='mcp-hotel://rooms/family';
+  else if(lq.includes('midweek')||lq.includes('offer')||lq.includes('deal')||lq.includes('discount')||lq.includes('save')||lq.includes('promo'))label='mcp-hotel://offers';
+  else if(lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom')||lq.includes('event'))label='mcp-hotel://services/cat/Meetings & Events';
+  else if(lq.includes('sea')||lq.includes('view')||lq.includes('ocean'))label='mcp-hotel://slots/available';
+  else if(lq.includes('spa')||lq.includes('massage')||lq.includes('facial')||lq.includes('treatment'))label='mcp-hotel://services/cat/Spa & Leisure';
+  else if(lq.includes('dining')||lq.includes('restaurant')||lq.includes('dinner')||lq.includes('food')||lq.includes('breakfast'))label='mcp-hotel://services/cat/Dining';
+  else if(lq.includes('dog')||lq.includes('pet'))label='mcp-hotel://services/applies/2 guests + dog';
+  else if(lq.includes('price')||lq.includes('cost')||lq.includes('expens')||lq.includes('cheap')||lq.includes('€')||lq.includes('euro'))label='mcp-hotel://services (price)';
+  else if(CATEGORIES.some(c=>lq.includes(c.toLowerCase())))label=`mcp-hotel://services/cat/${CATEGORIES.find(c=>lq.includes(c.toLowerCase()))}`;
+
+  addMCPArrow();
+  addMCPStep('fa-database','Read',label,'read');await delay(100);
+  addMCPArrow();
+  addMCPStep('fa-check-circle','Result',`${results.length} items found`,'result');await delay(80);
+  addMCPArrow();
+  addMCPStep('fa-brain','Groq LLM','Generating answer...','llm');
+}
+
+// ============================================================
+//  CONCIERGE AVATAR
+// ============================================================
+function avatarTalk(){avatar.classList.add('talk');setTimeout(()=>avatar.classList.remove('talk'),400)}
+
+// ============================================================
+//  CHAT UI
+// ============================================================
+function addMsg(text,who){
+  const d=document.createElement('div');d.className=`msg ${who}`;
+  d.innerHTML=text;
+  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;
+}
+function showTyping(){typing.classList.add('show');chat.scrollTop=chat.scrollHeight}
+function hideTyping(){typing.classList.remove('show')}
+
+function sparkleBurst(x,y){
+  const colors=['#C4956A','#4A90D9','#1B2A4A','#fff','#f5d6c6'];
+  for(let i=0;i<8;i++){
+    const e=document.createElement('div');e.className='sparkle';
+    const a=Math.random()*360;const d=15+Math.random()*20;
+    e.style.cssText=`left:${x}px;top:${y}px;--tx:${Math.cos(a*Math.PI/180)*d}px;--ty:${Math.sin(a*Math.PI/180)*d}px;background:${colors[i%colors.length]}`;
+    document.body.appendChild(e);setTimeout(()=>e.remove(),600);
+  }
+}
+
+function showToast(msg){toastMsg.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),3000)}
+
+// ============================================================
+//  REFERENCE CARDS
+// ============================================================
+function showRefCards(results){
+  refBody.innerHTML='';
+  if(!results||results.length===0){
+    refEmpty.style.display='block';
+    refCount.textContent=`${allData.length} services loaded`;
+    return;
+  }
+  refEmpty.style.display='none';
+  refCount.textContent=`${results.length} of ${allData.length} services`;
+
+  results.slice(0,15).forEach((r,i)=>{
+    const card=document.createElement('div');card.className='svc-card';
+    card.style.animationDelay=(i*0.06)+'s';
+
+    const cat=r.category||'Extras';
+    const img=UNsplash[cat]||'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&q=80';
+    const hasOffer=r.special_offer&&r.special_offer.trim();
+    const slots=parseInt(r.slots_this_week||'0');
+    const price=fmtPrice(r.price_eur);
+    const unit=r.unit||'';
+    const cap=r.capacity&&parseInt(r.capacity)>0?parseInt(r.capacity):null;
+
+    card.innerHTML=`
+      <img class="svc-card-img" src="${img}" alt="${r.item_name||cat}" loading="lazy">
+      <div class="svc-card-body">
+        <div class="svc-card-top">
+          <div>
+            <div class="svc-name">${r.item_name||cat}</div>
+            <div class="svc-category">${cat}${r.applies_to?` · ${r.applies_to}`:''}</div>
+          </div>
+          <div class="svc-price">€${price}</div>
+        </div>
+        ${unit?`<div style="font-size:.68rem;color:#999;margin-top:1px">${unit}</div>`:''}
+        <div class="svc-meta">
+          ${cap?`<span><i class="fas fa-user-friends"></i> Up to ${cap}</span>`:''}
+          <span><i class="fas fa-calendar-week"></i> ${r.availability||'Varies'}</span>
+          <span class="${slots>2?'svc-slots':slots>0?'svc-slots low':'svc-slots none'}"><i class="fas fa-clock"></i> ${slots>0?slots+' slots':'Fully booked'}</span>
+          ${hasOffer?`<span class="svc-offer"><i class="fas fa-tag"></i> ${r.special_offer}</span>`:''}
+        </div>
+        ${r.description?`<div class="svc-desc" id="desc-${i}">${r.description}</div>
+        <div class="svc-expand" onclick="toggleDesc(${i})"><i class="fas fa-chevron-down"></i> <span>Details</span></div>`:''}
+        <button class="svc-book" onclick="showToast('Enquiry sent for ${r.item_name||cat}')"><i class="fas fa-paper-plane" style="margin-right:6px"></i>Enquire</button>
+      </div>
+    `;
+    refBody.appendChild(card);
+  });
+}
+
+function toggleDesc(i){
+  const d=document.getElementById(`desc-${i}`);
+  const p=d.nextElementSibling.querySelector('span');
+  if(d.classList.toggle('open')){p.textContent='Hide'}else{p.textContent='Details'}
+}
+
+// ============================================================
+//  GROQ LLM
+// ============================================================
+async function askGroq(query,results){
+  if(!results||results.length===0)return generateLocal(query,results);
+  const context=results.slice(0,25);
+  const system=`You are a friendly, professional concierge at Harbour View Hotel, a 4-star hotel in Westport, Ireland.
+
+HOTEL DATA (${context.length} relevant items):
+${JSON.stringify(context,null,2)}
+
+RULES:
+- Answer ONLY from the data above. If it is not in the data, say "I don't have that information in my system" — do not invent.
+- Quote prices with the unit (per night, per person, per package, etc.).
+- Be warm, concise, and helpful like a great hotel receptionist.
+- Use short paragraphs.
+- Mention special offers when relevant.
+- End with a friendly follow-up question.`;
+
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
+      body:JSON.stringify({model:GROQ_MODEL,messages:[{role:'system',content:system},{role:'user',content:query}],temperature:0.7,max_tokens:600})
+    });
+    if(!r.ok){const e=await r.text();console.error('Groq error:',e);return generateLocal(query,results)}
+    const j=await r.json();
+    return j.choices[0].message.content;
+  }catch(e){console.error('Groq fetch failed:',e);return generateLocal(query,results)}
+}
+
+// ============================================================
+//  LOCAL FALLBACK
+// ============================================================
+function generateLocal(query,results){
+  if(!results||results.length===0)return "I'm sorry, I couldn't find any services matching that in our database. Could you try asking differently?";
+
+  const lq=query.toLowerCase();
+  const fmt=n=>n===Math.floor(n)?String(n):n.toFixed(2);
+
+  // ── Family rooms ──
+  if(lq.includes('family')&&lq.includes('room')){
+    const fr=results.filter(r=>r.category==='Rooms'&&(r.item_name.toLowerCase().includes('family')||r.applies_to==='Families'));
+    if(fr.length===0)return "I'm sorry, I don't see any family rooms in our current data. Let me check that for you.";
+    let r=`Here are our family accommodation options:<br><br>`;
+    fr.slice(0,6).forEach(f=>{
+      const cap=parseInt(f.capacity);const sl=parseInt(f.slots_this_week||'0');
+      r+=`• <strong>${f.item_name}</strong> — €${fmtPrice(f.price_eur)} ${f.unit||''}`;
+      if(cap)r+=`, sleeps up to ${cap}`;
+      r+=f.special_offer?` <span style="color:#C4956A">💥 ${f.special_offer}</span>`:'';
+      r+=`<br>`;
+    });
+    r+=`<br><br>Would you like to book any of these or know more about a specific option?`;
+    return r;
+  }
+
+  // ── Midweek offers ──
+  if(lq.includes('midweek')||(lq.includes('offer')&&lq.includes('mid'))){
+    const mo=results.filter(r=>r.special_offer&&r.special_offer.trim()&&(r.special_offer.toLowerCase().includes('midweek')||r.special_offer.toLowerCase().includes('sun-thu')||r.item_name.toLowerCase().includes('midweek')));
+    if(mo.length===0)return "I don't see any midweek offers in our current rates, but I can check other specials!";
+    let r=`Here are our midweek offers:<br><br>`;
+    mo.slice(0,6).forEach(o=>{
+      r+=`• <strong>${o.item_name}</strong> — €${fmtPrice(o.price_eur)} ${o.unit||''}`;
+      if(o.special_offer)r+=` &mdash; <span style="color:#C4956A">${o.special_offer}</span>`;
+      r+=`<br>`;
+    });
+    r+=`<br><br>Any of these catch your eye?`;
+    return r;
+  }
+
+  // ── Meeting room capacity ──
+  if((lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom')||lq.includes('event'))&&(lq.includes('20')||lq.includes('for')||lq.includes('capacity')||lq.includes('people')||lq.includes('person'))){
+    const cap=20;
+    const mt=results.filter(r=>r.category==='Meetings & Events').filter(r=>{const c=parseInt(r.capacity);return!isNaN(c)&&c>=cap;});
+    if(mt.length===0)return "I don't see any meeting rooms that accommodate 20 people in our current data.";
+    let r=`Yes, we have meeting spaces for ${cap}+ people:<br><br>`;
+    mt.slice(0,5).forEach(m=>{
+      r+=`• <strong>${m.item_name}</strong> — capacity ${m.capacity}, €${fmtPrice(m.price_eur)} ${m.unit||''}`;
+      r+=m.special_offer?` <span style="color:#C4956A">💥 ${m.special_offer}</span>`:'';
+      r+=`<br>`;
+    });
+    r+=`<br><br>Would you like to book one or get more details?`;
+    return r;
+  }
+
+  // ── Sea view rooms ──
+  if((lq.includes('sea')||lq.includes('view')||lq.includes('ocean'))&&(lq.includes('room')||lq.includes('available')||lq.includes('left')||lq.includes('slot')||lq.includes('week'))){
+    const sv=results.filter(r=>r.category==='Rooms'&&(r.item_name.toLowerCase().includes('sea')||r.description.toLowerCase().includes('sea')||r.item_name.toLowerCase().includes('view'))).filter(r=>parseInt(r.slots_this_week||'0')>0);
+    if(sv.length===0)return "I'm sorry, it looks like all our sea-view rooms are fully booked this week. Would you like to check other room types?";
+    let r=`Great news — we have sea-view rooms available this week:<br><br>`;
+    sv.slice(0,5).forEach(s=>{
+      r+=`• <strong>${s.item_name}</strong> — €${fmtPrice(s.price_eur)} ${s.unit||''}, ${s.slots_this_week} slot${s.slots_this_week>1?'s':''} left`;
+      r+=s.special_offer?` <span style="color:#C4956A">💥 ${s.special_offer}</span>`:'';
+      r+=`<br>`;
+    });
+    r+=`<br><br>Shall I check availability for specific dates?`;
+    return r;
+  }
+
+  // ── Dogs / pets ──
+  if(lq.includes('dog')||lq.includes('pet')||lq.includes('puppy')){
+    const pt=results.filter(r=>r.applies_to&&r.applies_to.toLowerCase().includes('dog'));
+    if(pt.length===0)return "I don't see pet-specific options in the current data, but we may be able to accommodate. Let me check with reception!";
+    let r=`Yes, we welcome pets! Here's what we offer:<br><br>`;
+    pt.slice(0,4).forEach(p=>{
+      r+=`• <strong>${p.item_name}</strong> — €${fmtPrice(p.price_eur)} ${p.unit||''}`;
+      r+=p.special_offer?` <span style="color:#C4956A">💥 ${p.special_offer}</span>`:'';
+      r+=`<br>`;
+    });
+    r+=`<br><br>Anything else I can help with?`;
+    return r;
+  }
+
+  // ── Spa ──
+  if(lq.includes('spa')||lq.includes('massage')||lq.includes('facial')||lq.includes('treatment')){
+    const sp=results.filter(r=>r.category==='Spa & Leisure');
+    if(sp.length===0)return "I don't see spa services in our current data, but I can check at reception!";
+    let r=`Our spa & leisure offerings:<br><br>`;
+    sp.slice(0,8).forEach(s=>{
+      r+=`• <strong>${s.item_name}</strong> — €${fmtPrice(s.price_eur)} ${s.unit||''}`;
+      r+=s.special_offer?` <span style="color:#C4956A">💥 ${s.special_offer}</span>`:'';
+      r+=`<br>`;
+    });
+    r+=`<br><br>Would you like to book a treatment?`;
+    return r;
+  }
+
+  // ── Dining ──
+  if(lq.includes('dining')||lq.includes('restaurant')||lq.includes('dinner')||lq.includes('food')||lq.includes('breakfast')||lq.includes('eat')){
+    const dn=results.filter(r=>r.category==='Dining');
+    if(dn.length===0)return "I don't see dining options in our current data.";
+    let r=`Our dining options:<br><br>`;
+    dn.slice(0,8).forEach(d=>{
+      r+=`• <strong>${d.item_name}</strong> — €${fmtPrice(d.price_eur)} ${d.unit||''}`;
+      r+=d.special_offer?` <span style="color:#C4956A">💥 ${d.special_offer}</span>`:'';
+      r+=`<br>`;
+    });
+    r+=`<br><br>Would you like to make a reservation?`;
+    return r;
+  }
+
+  // ── Price / cost ──
+  if(lq.includes('price')||lq.includes('cost')||lq.includes('how much')||lq.includes('€')||lq.includes('euro')||lq.includes('expensive')||lq.includes('cheap')||lq.includes('rate')){
+    if(lq.includes('most expensive')||lq.includes('pricey')||lq.includes('costly')||lq.includes('highest')||lq.includes('dearest')){
+      const sorted=[...results].sort((a,b)=>priceToEuro(b.price_eur)-priceToEuro(a.price_eur));
+      const t=sorted[0];
+      return `The most expensive option is <strong>${t.item_name||t.category}</strong> at €${fmtPrice(t.price_eur)} ${t.unit||''}.<br><br>It ${t.capacity&&parseInt(t.capacity)>0?`accommodates up to ${t.capacity} guests, `:''}is available ${t.availability||'on request'}${t.special_offer?`, and ${t.special_offer}`:''}.<br><br>Would you like to see more affordable options?`;
+    }
+    if(lq.includes('cheapest')||lq.includes('affordable')||lq.includes('lowest')||lq.includes('least')||lq.includes('budget')){
+      const sorted=[...results].sort((a,b)=>priceToEuro(a.price_eur)-priceToEuro(b.price_eur));
+      const t=sorted[0];
+      return `Our most affordable option is <strong>${t.item_name||t.category}</strong> at just €${fmtPrice(t.price_eur)} ${t.unit||''}!<br><br>${t.capacity&&parseInt(t.capacity)>0?`It accommodates up to ${t.capacity} guests. `:''}${t.special_offer?`<span style="color:#C4956A">💥 ${t.special_offer}</span><br><br>`:'<br><br>'}Would you like to book it?`;
+    }
+
+    const nums=results.map(r=>priceToEuro(r.price_eur));
+    const mn=Math.min(...nums);const mx=Math.max(...nums);
+    let r=`Our prices range from <strong>€${fmt(mn)}</strong>`;
+    if(mx!==mn)r+=` to <strong>€${fmt(mx)}</strong>`;
+    r+=` across ${results.length} item${results.length>1?'s':''}.<br><br>`;
+    const off=results.filter(o=>o.special_offer&&o.special_offer.trim());
+    if(off.length>0){
+      r+=`<span style="color:#C4956A">💥 Special offers available:</span><br>`;
+      off.slice(0,4).forEach(o=>{
+        r+=`• ${o.item_name}: ${o.special_offer}<br>`;
+      });
+      r+=`<br>`;
+    }
+    r+=`Anything specific you'd like pricing on?`;
+    return r;
+  }
+
+  // ── General summary ──
+  const off=results.filter(o=>o.special_offer&&o.special_offer.trim());
+  const cats=[...new Set(results.map(r=>r.category))];
+  const nums=results.map(r=>priceToEuro(r.price_eur));
+  const mn=Math.min(...nums);const mx=Math.max(...nums);
+  let r=`I found <strong>${results.length}</strong> item${results.length>1?'s':''}`;
+  if(cats.length===1)r+=` in <strong>${cats[0]}</strong>`;
+  else if(cats.length>1&&cats.length<=3)r+=` across ${cats.join(', ')}`;
+  r+=`, from €${fmt(mn)}`;
+  if(mx!==mn)r+=` to €${fmt(mx)}`;
+  r+=`.<br><br>`;
+  if(off.length>0){
+    r+=`<span style="color:#C4956A">💥 Special offers available:</span><br>`;
+    off.slice(0,4).forEach(o=>{
+      r+=`• ${o.item_name}: ${o.special_offer}<br>`;
+    });
+    r+=`<br>`;
+  }
+  r+=`What else would you like to know?`;
+  return r;
+}
+
+// ============================================================
+//  MAIN HANDLER
+// ============================================================
+async function handleCommand(text){
+  if(isSending||!text.trim())return;
+  isSending=true;sendBtn.disabled=true;
+  const q=text.trim();
+  addMsg(q,'user');
+  showTyping();
+  avatarTalk();
+
+  // Determine resource
+  let resource='mcp-hotel://services';
+  const lq=q.toLowerCase();
+  if(lq.includes('family')&&lq.includes('room'))resource='mcp-hotel://rooms/family';
+  else if(lq.includes('midweek')||(lq.includes('special')&&lq.includes('offer'))||(lq.includes('deal')&&lq.includes('mid')))resource='mcp-hotel://offers';
+  else if((lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom'))&&(lq.includes('20')||lq.includes('for')||lq.includes('people')||lq.includes('person')||lq.includes('capacity')))resource='mcp-hotel://capacity/20';
+  else if(lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom')||lq.includes('event')||lq.includes('wedding'))resource='mcp-hotel://services/cat/Meetings & Events';
+  else if((lq.includes('sea')||lq.includes('view')||lq.includes('ocean'))&&(lq.includes('room')||lq.includes('available')||lq.includes('left')||lq.includes('slot')))resource='mcp-hotel://services/cat/Rooms';
+  else if(lq.includes('spa')||lq.includes('massage')||lq.includes('facial')||lq.includes('treatment'))resource='mcp-hotel://services/cat/Spa & Leisure';
+  else if(lq.includes('dining')||lq.includes('restaurant')||lq.includes('dinner')||lq.includes('food')||lq.includes('breakfast')||lq.includes('lunch'))resource='mcp-hotel://services/cat/Dining';
+  else if(lq.includes('dog')||lq.includes('pet')||lq.includes('puppy'))resource='mcp-hotel://services/applies/2 guests + dog';
+  else if(lq.includes('offer')||lq.includes('deal')||lq.includes('discount')||lq.includes('save')||lq.includes('promo')||lq.includes('special'))resource='mcp-hotel://offers';
+  else if(lq.includes('price')||lq.includes('cost')||lq.includes('how much')||lq.includes('€')||lq.includes('euro')||lq.includes('expensive')||lq.includes('cheap')||lq.includes('rate'))resource='mcp-hotel://services';
+  else if(lq.includes('slot')||lq.includes('available')||lq.includes('week')||lq.includes('open')||lq.includes('book'))resource='mcp-hotel://slots/available';
+  else{
+    // Check if any category is mentioned
+    for(const c of CATEGORIES){
+      if(lq.includes(c.toLowerCase())){resource=`mcp-hotel://services/cat/${c}`;break}
+    }
+  }
+
+  let results=mcpQuery(resource);
+
+  // Filter by category if not already specific
+  if(resource==='mcp-hotel://services'||resource==='mcp-hotel://offers'||resource==='mcp-hotel://slots/available'){
+    for(const c of CATEGORIES){
+      if(lq.includes(c.toLowerCase())){results=results.filter(r=>r.category===c);break}
+    }
+  }
+
+  // Run MCP viz
+  await runMCPFlow(q,results);
+
+  // Get answer
+  hideTyping();
+  const reply=await askGroq(q,results);
+
+  addMsg(reply,'bot');
+  showRefCards(results);
+
+  // Finalize MCP
+  clearMCP();
+  addMCPStep('fa-check-circle','MCP Flow','Complete','done');
+  addMCPStep('fa-star','Answer','Delivered','done');
+
+  // Sparkle burst on send button
+  const rect=sendBtn.getBoundingClientRect();
+  sparkleBurst(rect.left+rect.width/2,rect.top+rect.height/2);
+
+  setTimeout(()=>{
+    clearMCP();
+    addMCPStep('fa-concierge-bell','MCP Hotel Server','Ready','discover');
+  },3000);
+
+  isSending=false;sendBtn.disabled=false;
+}
+
+// ============================================================
+//  EVENTS
+// ============================================================
+sendBtn.addEventListener('click',async()=>{
+  const t=input.value.trim();
+  if(!t)return;
+  input.value='';
+  await handleCommand(t);
+});
+input.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendBtn.click()}
+});
+
+// ============================================================
+//  BOOT
+// ============================================================
+buildPills();
+buildAwning();
+initTaglines();
+await fetchSheet();
+addMCPStep('fa-concierge-bell','MCP Hotel Server','Ready','discover');
+</script>
+
+</body>
+</html>
