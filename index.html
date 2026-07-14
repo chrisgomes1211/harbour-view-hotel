@@ -647,11 +647,15 @@ RULES:
 - End with a friendly follow-up question.`;
 
   try{
+    const ctrl=new AbortController();
+    const tmr=setTimeout(()=>ctrl.abort(),8000);
     const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${GROQ_KEY}`},
-      body:JSON.stringify({model:GROQ_MODEL,messages:[{role:'system',content:system},{role:'user',content:query}],temperature:0.7,max_tokens:600})
+      body:JSON.stringify({model:GROQ_MODEL,messages:[{role:'system',content:system},{role:'user',content:query}],temperature:0.7,max_tokens:600}),
+      signal:ctrl.signal
     });
+    clearTimeout(tmr);
     if(!r.ok){const e=await r.text();console.error('Groq error:',e);return generateLocal(query,results)}
     const j=await r.json();
     return j.choices[0].message.content;
@@ -831,61 +835,61 @@ async function handleCommand(text){
   showTyping();
   avatarTalk();
 
-  // Determine resource
-  let resource='mcp-hotel://services';
-  const lq=q.toLowerCase();
-  if(lq.includes('family')&&lq.includes('room'))resource='mcp-hotel://rooms/family';
-  else if(lq.includes('midweek')||(lq.includes('special')&&lq.includes('offer'))||(lq.includes('deal')&&lq.includes('mid')))resource='mcp-hotel://offers';
-  else if((lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom'))&&(lq.includes('20')||lq.includes('for')||lq.includes('people')||lq.includes('person')||lq.includes('capacity')))resource='mcp-hotel://capacity/20';
-  else if(lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom')||lq.includes('event')||lq.includes('wedding'))resource='mcp-hotel://services/cat/Meetings & Events';
-  else if((lq.includes('sea')||lq.includes('view')||lq.includes('ocean'))&&(lq.includes('room')||lq.includes('available')||lq.includes('left')||lq.includes('slot')))resource='mcp-hotel://services/cat/Rooms';
-  else if(lq.includes('spa')||lq.includes('massage')||lq.includes('facial')||lq.includes('treatment'))resource='mcp-hotel://services/cat/Spa & Leisure';
-  else if(lq.includes('dining')||lq.includes('restaurant')||lq.includes('dinner')||lq.includes('food')||lq.includes('breakfast')||lq.includes('lunch'))resource='mcp-hotel://services/cat/Dining';
-  else if(lq.includes('dog')||lq.includes('pet')||lq.includes('puppy'))resource='mcp-hotel://services/applies/2 guests + dog';
-  else if(lq.includes('offer')||lq.includes('deal')||lq.includes('discount')||lq.includes('save')||lq.includes('promo')||lq.includes('special'))resource='mcp-hotel://offers';
-  else if(lq.includes('price')||lq.includes('cost')||lq.includes('how much')||lq.includes('€')||lq.includes('euro')||lq.includes('expensive')||lq.includes('cheap')||lq.includes('rate'))resource='mcp-hotel://services';
-  else if(lq.includes('slot')||lq.includes('available')||lq.includes('week')||lq.includes('open')||lq.includes('book'))resource='mcp-hotel://slots/available';
-  else{
-    // Check if any category is mentioned
-    for(const c of CATEGORIES){
-      if(lq.includes(c.toLowerCase())){resource=`mcp-hotel://services/cat/${c}`;break}
+  try {
+    // Determine resource
+    let resource='mcp-hotel://services';
+    const lq=q.toLowerCase();
+    if(lq.includes('family')&&lq.includes('room'))resource='mcp-hotel://rooms/family';
+    else if(lq.includes('midweek')||(lq.includes('special')&&lq.includes('offer'))||(lq.includes('deal')&&lq.includes('mid')))resource='mcp-hotel://offers';
+    else if((lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom'))&&(lq.includes('20')||lq.includes('for')||lq.includes('people')||lq.includes('person')||lq.includes('capacity')))resource='mcp-hotel://capacity/20';
+    else if(lq.includes('meeting')||lq.includes('conference')||lq.includes('boardroom')||lq.includes('event')||lq.includes('wedding'))resource='mcp-hotel://services/cat/Meetings & Events';
+    else if((lq.includes('sea')||lq.includes('view')||lq.includes('ocean'))&&(lq.includes('room')||lq.includes('available')||lq.includes('left')||lq.includes('slot')))resource='mcp-hotel://services/cat/Rooms';
+    else if(lq.includes('spa')||lq.includes('massage')||lq.includes('facial')||lq.includes('treatment'))resource='mcp-hotel://services/cat/Spa & Leisure';
+    else if(lq.includes('dining')||lq.includes('restaurant')||lq.includes('dinner')||lq.includes('food')||lq.includes('breakfast')||lq.includes('lunch'))resource='mcp-hotel://services/cat/Dining';
+    else if(lq.includes('dog')||lq.includes('pet')||lq.includes('puppy'))resource='mcp-hotel://services/applies/2 guests + dog';
+    else if(lq.includes('offer')||lq.includes('deal')||lq.includes('discount')||lq.includes('save')||lq.includes('promo')||lq.includes('special'))resource='mcp-hotel://offers';
+    else if(lq.includes('price')||lq.includes('cost')||lq.includes('how much')||lq.includes('€')||lq.includes('euro')||lq.includes('expensive')||lq.includes('cheap')||lq.includes('rate'))resource='mcp-hotel://services';
+    else if(lq.includes('slot')||lq.includes('available')||lq.includes('week')||lq.includes('open')||lq.includes('book'))resource='mcp-hotel://slots/available';
+    else{
+      for(const c of CATEGORIES){
+        if(lq.includes(c.toLowerCase())){resource=`mcp-hotel://services/cat/${c}`;break}
+      }
     }
-  }
 
-  let results=mcpQuery(resource);
+    let results=mcpQuery(resource);
 
-  // Filter by category if not already specific
-  if(resource==='mcp-hotel://services'||resource==='mcp-hotel://offers'||resource==='mcp-hotel://slots/available'){
-    for(const c of CATEGORIES){
-      if(lq.includes(c.toLowerCase())){results=results.filter(r=>r.category===c);break}
+    if(resource==='mcp-hotel://services'||resource==='mcp-hotel://offers'||resource==='mcp-hotel://slots/available'){
+      for(const c of CATEGORIES){
+        if(lq.includes(c.toLowerCase())){results=results.filter(r=>r.category===c);break}
+      }
     }
-  }
 
-  // Run MCP viz
-  await runMCPFlow(q,results);
+    await runMCPFlow(q,results);
 
-  // Get answer
-  hideTyping();
-  const reply=await askGroq(q,results);
+    hideTyping();
+    const reply=await askGroq(q,results);
 
-  addMsg(reply,'bot');
-  showRefCards(results);
+    addMsg(reply,'bot');
+    showRefCards(results);
 
-  // Finalize MCP
-  clearMCP();
-  addMCPStep('fa-check-circle','MCP Flow','Complete','done');
-  addMCPStep('fa-star','Answer','Delivered','done');
-
-  // Sparkle burst on send button
-  const rect=sendBtn.getBoundingClientRect();
-  sparkleBurst(rect.left+rect.width/2,rect.top+rect.height/2);
-
-  setTimeout(()=>{
     clearMCP();
-    addMCPStep('fa-concierge-bell','MCP Hotel Server','Ready','discover');
-  },3000);
+    addMCPStep('fa-check-circle','MCP Flow','Complete','done');
+    addMCPStep('fa-star','Answer','Delivered','done');
 
-  isSending=false;sendBtn.disabled=false;
+    const rect=sendBtn.getBoundingClientRect();
+    sparkleBurst(rect.left+rect.width/2,rect.top+rect.height/2);
+
+    setTimeout(()=>{
+      clearMCP();
+      addMCPStep('fa-concierge-bell','MCP Hotel Server','Ready','discover');
+    },3000);
+  } catch(e){
+    console.error('handleCommand error:',e);
+    hideTyping();
+    addMsg("Sorry, something went wrong. Please try again.",'bot');
+  } finally {
+    isSending=false;sendBtn.disabled=false;
+  }
 }
 
 // ============================================================
