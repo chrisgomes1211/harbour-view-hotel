@@ -340,32 +340,34 @@ const FETCH_URLS = [
 ];
 
 async function fetchSheet(){
-  showLoad('Connecting to hotel database...');
+  // Show embedded data instantly so the page loads fast
+  showLoad('Loading hotel database...');
+  allData = FALLBACK_DATA;
+  buildMaps();
+  refCount.textContent=`${allData.length} services loaded`;
+  updateEmptyState();
+  setTimeout(hideLoad,300);
+
+  // Try fetching live data in background (with 3s timeout per URL)
   for(const url of FETCH_URLS){
     try{
-      const r=await fetch(url,{mode:'cors'});
+      const ctrl=new AbortController();
+      const tmr=setTimeout(()=>ctrl.abort(),3000);
+      const r=await fetch(url,{mode:'cors',signal:ctrl.signal});
+      clearTimeout(tmr);
       if(!r.ok)continue;
       const csv=await r.text();
       const parsed=parseCSV(csv);
       if(parsed.length>5){
         allData=parsed;
         buildMaps();
-        showLoad('Ready!');
-        setTimeout(hideLoad,500);
         refCount.textContent=`${allData.length} services loaded`;
-        updateEmptyState();
-        console.log(`Loaded ${allData.length} services`);
+        console.log(`Loaded ${allData.length} services from sheet (live)`);
         return;
       }
-    }catch(e){console.log('Fetch failed',url,e)}
+    }catch(e){}
   }
-  // Fallback
-  setTimeout(hideLoad,800);
-  allData = FALLBACK_DATA;
-  buildMaps();
-  refCount.textContent=`${allData.length} services loaded`;
-  updateEmptyState();
-  console.warn('Using embedded fallback data');
+  console.warn('Using embedded fallback data (live fetch timed out)');
 }
 
 function parseCSV(csv){
