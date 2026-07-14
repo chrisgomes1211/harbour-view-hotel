@@ -12,13 +12,10 @@ jobs:
       - name: Inject Groq API key
         run: |
           sed -i "s/__GROQ_API_KEY__/${{ secrets.GROQ_API_KEY }}/g" index.html
-      - name: Copy to deploy dir
-        run: |
-          mkdir -p /tmp/deploy
-          cp index.html .nojekyll /tmp/deploy/
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: /tmp/deploy
-          force_orphan: true
+          branch: gh-pages
+          folder: .
+          clean: true
+          single-commit: true
