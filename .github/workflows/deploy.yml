@@ -2,8 +2,6 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-permissions:
-  contents: write
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,10 +10,15 @@ jobs:
       - name: Inject Groq API key
         run: |
           sed -i "s/__GROQ_API_KEY__/${{ secrets.GROQ_API_KEY }}/g" index.html
-      - name: Deploy to gh-pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
-          folder: .
-          clean: true
+      - name: Deploy
+        run: |
+          mkdir -p /tmp/out
+          cp index.html .nojekyll /tmp/out/
+          cd /tmp/out
+          git init
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add -A
+          git commit -m "Deploy"
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:gh-pages --force
